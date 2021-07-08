@@ -41,4 +41,7 @@ export default {
 
 <style>
   @import "./assets/css/base.css";
+  #Tabbar {
+    z-index: 9;
+  }
 </style>
