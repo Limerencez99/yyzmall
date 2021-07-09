@@ -3,13 +3,19 @@
     <nav-bar class="home-nav">
       <template v-slot:center>购物街</template>
     </nav-bar>
-
+    <tab-control class="tab-control" :titles="['流行', '新款', '精选']"
+                 @tabClick="tabClick"
+                 ref="tabControl1"
+                 v-show="tabFixed"
+    ></tab-control>
     <scroll class="content" ref="scroll" @pullingUp="loadMore" @scroll="contentScroll">
     <home-swiper :banners="banners"></home-swiper>
     <recommend-view :recommends="recommends"></recommend-view>
     <feature-view></feature-view>
     <tab-control class="tab-control" :titles="['流行', '新款', '精选']"
                  @tabClick="tabClick"
+                 ref="tabControl2"
+                 v-show="!tabFixed"
     ></tab-control>
     <goods-list :goods="goods[currentType].list"></goods-list>
     </scroll>
@@ -30,6 +36,7 @@ import BackTop from "../../components/content/backTop/BackTop";
 
 import {getHomeMultidate, getHomeGoods} from "../../network/home";
 import scroll from "../../components/common/scroll/scroll";
+import {debounce} from "../../common/utils";
 
 export default {
   name: "Home",
@@ -54,7 +61,9 @@ export default {
         'sell': {page: 0, list: []},
       },
       currentType: 'pop',
-      showBackTop: false
+      showBackTop: false,
+      tabFixed: false,
+      tabOffsetTop: 0,
     }
   },
   created() {
@@ -66,12 +75,23 @@ export default {
     this.getHomeGoods('new')
     this.getHomeGoods('sell')
   },
+  mounted() {
+    const refresh = debounce(this.refreshScroll, 50)
+    this.$bus.$on('itemImgLoad', () => {
+      refresh()
+    })
+  },
   methods: {
+    refreshScroll() {
+      this.$refs.scroll.scroll.refresh()
+    },
     loadMore() {
       this.getHomeGoods(this.currentType)
     },
     contentScroll(position) {
+      if(this.tabOffsetTop == 0) this.tabOffsetTop = this.$refs.tabControl2.$el.offsetTop
       this.showBackTop = position.y < -1000
+      this.tabFixed = position.y < -this.tabOffsetTop
     },
     backClick() {
       this.$refs.scroll.scroll.scrollTo(0, 0, 500)
@@ -85,7 +105,6 @@ export default {
       })
     },
     tabClick(index) {
-      console.log(index);
       switch (index) {
         case 0:
           this.currentType = 'pop'
@@ -96,6 +115,8 @@ export default {
         case 2:
           this.currentType = 'sell'
       }
+      this.$refs.tabControl1.currentIndex = index
+      this.$refs.tabControl2.currentIndex = index
     }
   }
 }
